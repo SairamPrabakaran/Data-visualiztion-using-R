@@ -1,0 +1,583 @@
+---
+title: '2315589_final_assignment'
+author: "Sairam Prabakaran"
+output: html_document
+date: "2024-04-23"
+---
+
+
+## R Markdown
+
+## Data Description:
+This analysis uses crime statistics and weather data for a specified region. The crime dataset includes details on many kinds of crimes, such as the date, category, and status of the outcome. The temperature, precipitation, humidity, and wind intensity observations are all part of the weather dataset.
+
+## Introduction:
+Law enforcement organizations, urban planners, and legislators can all benefit from an understanding of seasonal patterns in crime incidences and weather. In this study, we look at the links between crime events and weather variables, examining trends and patterns throughout time.
+
+
+```{r }
+# Load the crime dataset
+setwd("C:/Users/saira/Downloads/data visualisation")
+crime_data <- read.csv("crime23.csv")
+weather_data <- read.csv("temp2023.csv")
+```
+
+## structure of data sets
+
+```{r }
+str(crime_data)
+```
+```{r}
+str(weather_data)
+
+```
+##view first few rows of datasets
+```{r }
+head(crime_data)
+```
+
+```{r }
+head(weather_data)
+```
+##summary of datasets
+```{r }
+summary(crime_data)
+```
+```{r}
+summary(weather_data)
+```
+
+## Check for missing values in crime dataset
+```{r }
+sum(is.na(crime_data))
+
+# Fill missing values in the crime dataset with NULL
+crime_data[is.na(crime_data)] <- "NULL"
+
+```
+##check for missing values in weather dataset
+```{r }
+sum(is.na(weather_data))
+# Fill missing values in the weather dataset with NULL
+weather_data[is.na(weather_data)] <-"NULL"
+
+```
+## Number of missing values for each column of crime_data
+```{r }
+# Load the ggplot2 library
+library(ggplot2)
+
+# Check for unique values in categorical variables
+unique(crime_data$category)
+unique(crime_data$street_name)
+
+# Visualize the count of crime incidents by category using ggplot2 with adjusted x-axis labels
+ggplot(crime_data, aes(x = category)) +
+  geom_bar(fill = "skyblue") +
+  labs(title = "Count of Crime Incidents by Category", x = "Category", y = "Count") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+```
+## Observations:
+for crime_data 
+the columns "context" and "outcome_status" have missing values (6878 and 677, respectively). 
+Since the 'context' column is completely empty and contains no helpful information, setting it to null will have no effect on the analysis.Because the missing values in outcome_status represent important contextual information about the crimes, removing these rows may not be acceptable.Instead, we can think about replacing missing values in the 'outcome_status' column with a placeholder value.
+
+## Impute missing values in 'outcome_status' column of crime_data with "Unknown"
+```{r}
+# Impute missing values in 'outcome_status' column of crime_data with "Unknown"
+crime_data$outcome_status[is.na(crime_data$outcome_status)] <- "Unknown"
+
+```
+
+```{r}
+# Drop the 'context' column
+crime_data <- crime_data[, -which(names(crime_data) == "context")]
+
+# Verify that the column has been dropped
+names(crime_data)
+
+```
+##plotting of weatherdata
+```{r }
+# the dataset loaded into a variable named 'weather_data'
+
+# Convert the 'Date' column to Date format
+weather_data$Date <- as.Date(weather_data$Date)
+
+# Plotting
+plot(weather_data$Date, weather_data$TemperatureCAvg, type = "l", 
+     col = "blue", xlab = "Date", ylab = "Temperature (°C)",
+     main = "Average Temperature Over Time")
+```
+
+## number of missing values for each column of weather_data
+
+```{r}
+library(ggplot2)
+
+# Calculate the number of missing values for each column
+missing_values_weather <- colSums(is.na(weather_data))
+
+# Create a data frame to store missing values information
+missing_data <- data.frame(
+  Variable = names(missing_values_weather),
+  Missing_Values = missing_values_weather
+)
+
+# Create a line plot to visualize missing values
+missing_plot <- ggplot(missing_data, aes(x = Variable, y = Missing_Values)) +
+  geom_line(color = "skyblue", size = 1.5) +
+  geom_point(color = "skyblue", size = 3) +  # Add points for clarity
+  labs(title = "Missing Values in weather_data",
+       x = "Variables",
+       y = "Number of Missing Values") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Display the plot
+print(missing_plot)
+
+
+```
+## Observations:
+For weather data
+The columns 'Precmm', 'lowcloct', 'SunD1h', 'PreselevHp', and 'SnowDepcm' have missing values of 27, 13, 82, 365, and 364, respectively.
+The columns PreselevHp' and 'SnowDepcm' are completely empty; columns do not include any relevant information, thus eliminating them will not influence the analysis.
+Because the missing values in Precmm', 'lowcloct', and 'SunD1h' are minor in comparison to the dataset's size, replace them with the mean of the non-missing values.
+
+
+```{r}
+# Remove the 'PreselevHp' and 'SnowDepcm' columns
+weather_data <- weather_data[, !(names(weather_data) %in% c("PreselevHp", "SnowDepcm"))]
+
+```
+
+## Impute missing values for specified columns with mean or median
+```{r}
+# Impute missing values for specified columns with mean or median
+weather_data$Precmm[is.na(weather_data$Precmm)] <- mean(weather_data$Precmm, na.rm = TRUE)
+weather_data$lowClOct[is.na(weather_data$lowClOct)] <- mean(weather_data$lowClOct, na.rm = TRUE)
+weather_data$SunD1h[is.na(weather_data$SunD1h)] <- mean(weather_data$SunD1h, na.rm = TRUE)
+
+
+```
+
+## Check for missing values in weather_data
+```{r}
+# Check for missing values in weather_data
+missing_values_weather <- colSums(is.na(weather_data))
+missing_values_weather
+```
+
+## Exploratory Analysis:
+
+## crime_data analysis
+```{r}
+# Load required libraries
+library(plotly)
+
+# Histogram of crime incidents over time
+crime_ts_hist <- plot_ly(crime_data, x = ~date) %>%
+  add_histogram(histnorm = "count", marker = list(color = "red")) %>%
+  layout(xaxis = list(title = "Date", titlefont = list(size = 11), titleoffset = 1), 
+         yaxis = list(title = "Number of Incidents", titlefont = list(size = 11), titleoffset = 10),
+         title = "Crime Incidents over time",
+         font = list(size = 14))
+
+# Histogram of crime categories
+crime_category_hist <- plot_ly(crime_data, x = ~category) %>%
+  add_histogram(marker = list(color = "orange")) %>%
+  layout(xaxis = list(title = "Category", titlefont = list(size = 11), titleoffset = 10), 
+         yaxis = list(title = "Frequency", titlefont = list(size = 11), titleoffset = 10),
+         title = "Frequency of Crime Categories",
+         font = list(size = 14))
+
+# Arrange plots using subplot function
+combined_plots <- subplot(
+  crime_ts_hist,
+  crime_category_hist,
+  nrows = 2,
+  titleX = TRUE, titleY = TRUE,
+  margin = 0.05
+) 
+
+# Convert combined plots to plotly
+ggplotly(combined_plots)
+
+```
+## Observations:
+In the first plot The number of crime events has been steadily increasing over this time period.
+The crime rate looks to be continuously growing throughout the year.
+In the second plot, a bar chart depicts the frequency of various crime categories.Crimes such as theft from the person, shoplifting, and burglary are less common than violent crimes.The most common crimes include stealing and causing problems.
+
+```{r}
+library(leaflet)
+
+# Create a leaflet map
+crime_leaflet <- leaflet(crime_data) %>%
+  addTiles() %>%
+  addCircleMarkers(lng = ~long, lat = ~lat, radius = 2, color = "red", opacity = 0.8) %>%
+  setView(lng = mean(crime_data$long), lat = mean(crime_data$lat), zoom = 12) %>%
+  addProviderTiles("Stamen.TonerLabels") %>%
+  addLegend(position = "topright", colors = "red", labels = "Crimes") %>%
+  addPopups(lng = ~long, lat = ~lat, popup = ~paste("Category:", category, "<br>Date:", date, "<br>Location:", street_name))
+
+# Display the leaflet map
+crime_leaflet
+
+
+```
+## Observations:
+Leaflet map showing the distribution of crimes in the area. When necessary, you can adjust the map's zoom and interact with it.
+Crime Hot Spots: Locate places with a high number of criminal events. Clusters of red marks on the map represent high-crime areas. Analyzing these hotspots can assist in more efficiently allocating resources for crime prevention and law enforcement.
+
+
+```{r}
+# Load required libraries
+library(shiny)
+library(plotly)
+library(dplyr)
+
+# Sample data
+crime_data <- data.frame(
+  category = sample(c("theft-from-the-person", "violent-crime", "bicycle-theft", "burglary", "drugs", "other-theft", "public-order", "robbery", "shoplifting", "anti-social-behaviour", "criminal-damage-arson", "other-crime", "possession-of-weapons", "vehicle-crime"), 100, replace = TRUE),
+  outcome_status <- sample(c("Further investigation is not in the public interest", "Status update unavailable", "Offender given a caution", "Court result unavailable", "Investigation complete; no suspect identified", "Further action is not in the public interest", "Local resolution", "Unable to prosecute suspect", "Action to be taken by another organisation", "Formal action is not in the public interest", "Awaiting court outcome", "Suspect charged as part of another case", "Under investigation"), 100, replace = TRUE)
+)
+
+# Define UI
+ui <- fluidPage(
+  titlePanel("Crime Analysis"),
+  
+  # Sidebar layout with inputs
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("outcome", "Filter by Outcome Status:", choices = c("All", unique(crime_data$outcome_status))),
+      br(),
+      actionButton("reset", "Reset Filters"),
+      br(),
+      tags$em("Select an outcome status to filter the data.")
+    ),
+    
+    # Main panel for displaying the plot
+    mainPanel(
+      plotlyOutput("crime_plot", height = "600px")  # Plot output
+    )
+  ),
+  
+  # Apply custom styles
+  tags$head(
+    tags$style(HTML("
+      .selectize-input, .selectize-dropdown {
+        font-size: 14px;
+      }
+      .btn-primary {
+        background-color: #5bc0de;
+        border-color: #46b8da;
+      }
+      .btn-primary:hover {
+        background-color: #31b0d5;
+        border-color: #269abc;
+      }
+      .plot-container {
+        margin-top: 20px;
+      }
+    "))
+  )
+)
+
+# Define server logic
+server <- function(input, output, session) {
+  # Filter data based on outcome status
+  filtered_data <- reactive({
+    if (is.null(input$outcome) || input$outcome == "All") {
+      return(crime_data)
+    } else {
+      return(crime_data %>% filter(outcome_status == input$outcome))
+    }
+  })
+  
+  # Calculate the frequency of each crime category
+  category_counts <- reactive({
+    filtered <- filtered_data()
+    if (nrow(filtered) == 0) {
+      return(data.frame(category = character(), n = numeric()))
+    } else {
+      return(filtered %>% count(category))
+    }
+  })
+  
+  # Render the plot
+  output$crime_plot <- renderPlotly({
+    category_counts_data <- category_counts()
+    
+    if (nrow(category_counts_data) == 0) {
+      return(plot_ly() %>%
+               layout(title = "No data available for the selected outcome status"))
+    }
+    
+    p <- plot_ly(category_counts_data, x = ~category, y = ~n, type = "bar", marker = list(color = "skyblue")) %>%
+      layout(title = "Distribution of Crime Categories", xaxis = list(title = "Category"), yaxis = list(title = "Frequency"))
+    
+    return(p)
+  })
+  
+  # Reset filters
+  observeEvent(input$reset, {
+    updateSelectInput(session, "outcome", selected = "All")
+  })
+}
+
+# Run the application
+shinyApp(ui = ui, server = server)
+
+```
+
+Distribution of Crime Categories: Investigate the distribution of crime categories based on various outcome statuses.You can choose an outcome status from the dropdown menu. The pie chart refreshes dynamically to illustrate the distribution of crime categories based on the selected outcome status.
+The graphic depicts the proportion of each crime type to the total number of reported offenses for the given outcome status. Each slice of the pie represents a distinct crime category.
+
+## weather_data analysis
+
+
+```{r}
+# Density plot of TemperatureCAvg
+weather_density <- plot_ly(weather_data, x = ~TemperatureCAvg, type = "histogram", color = I("violet")) %>%
+  layout(xaxis = list(title = "Temperature (°C)", titlefont = list(size = 10), titleoffset = 5), 
+         yaxis = list(title = "Density", titlefont = list(size = 10), titleoffset = 5))
+
+# Add annotation for title
+weather_density <- weather_density %>%
+  layout(annotations = list(
+    x = 0.5, y = 1.1, xref = "paper", yref = "paper", 
+    text = "Density Plot of Average Temperature", 
+    showarrow = FALSE, 
+    font = list(size = 12)  # Title font size
+  ))
+
+# Violin plot of TemperatureCMax and TemperatureCMin
+weather_violin <- plot_ly(weather_data, y = ~TemperatureCMax, type = "violin", box = list(visible = TRUE), meanline = list(visible = TRUE), line = list(color = "pink")) %>%
+  add_trace(y = ~TemperatureCMin, line = list(color = "yellow")) %>%
+  layout(yaxis = list(title = "Temperature (°C)", titlefont = list(size = 10), titleoffset = 5))
+
+# Add annotation for title
+weather_violin <- weather_violin %>%
+  layout(annotations = list(
+    x = 0.5, y = 1.1, xref = "paper", yref = "paper", 
+    text = "Violin Plot of Max and Min Temperatures", 
+    showarrow = FALSE, 
+    font = list(size = 12)  # Title font size
+  ))
+
+# Scatter plot of TemperatureCAvg vs. WindkmhInt
+weather_scatter <- plot_ly(weather_data, x = ~TemperatureCAvg, y = ~WindkmhInt, mode = "markers", type = "scatter", marker = list(color = "orange")) %>%
+  layout(xaxis = list(title = "Average Temperature (°C)", titlefont = list(size = 10), titleoffset = 5), 
+         yaxis = list(title = "Wind Intensity (km/h)", titlefont = list(size = 10), titleoffset = 5))
+
+# Add annotation for title
+weather_scatter <- weather_scatter %>%
+  layout(annotations = list(
+    x = 0.5, y = 1.1, xref = "paper", yref = "paper", 
+    text = "Scatter Plot of Average Temperature vs. Wind Intensity", 
+    showarrow = FALSE, 
+    font = list(size = 12)  # Title font size
+  ))
+
+# Display the plots
+subplot(
+  weather_density, 
+  weather_violin, 
+  weather_scatter, 
+  nrows = 3, 
+  titleX = TRUE, titleY = TRUE,
+  margin = 0.05
+)
+
+
+```
+## Observations:
+1. Temperature Analysis: Identify temperature patterns, hottest/coldest times, and probable climate change implications.
+Observations:
+
+1. A density plot of average temperature (°C):
+This graphic depicts the frequency distribution of average temperatures. The form of the bars indicates that the data is somewhat bell-shaped, with a tiny lean towards cooler temperatures.
+One data point sticks out as an outlier, as it is substantially lower than the rest of the others.
+
+2. Violin Plot of Maximum and Minimum Temperatures: This plot makes it possible to compare the range of minimum and maximum temperatures quickly.
+The box plot indicates that lowest temperatures typically have a greater range than maximum temperatures. The IQR for minimum temperatures is bigger, and the whiskers reach further. There are even additional outliers in the minimum temperature category.
+
+3. Scatter Plot of Average Temperature vs. Wind Intensity: This plot shows the correlation between average temperature and wind intensity.Looking for patterns in the point distribution makes it difficult to determine if the two variables have a positive or negative connection. The plot has a cloud of points, and there is no distinct linear trend in either direction.
+
+```{r}
+# Load required libraries
+library(ggplot2)
+library(dplyr)
+library(zoo)
+
+# Convert Date column to proper datetime format
+weather_data$Date <- as.Date(weather_data$Date)
+
+# Apply moving average smoothing to TemperatureCAvg
+weather_data <- weather_data %>%
+  mutate(smoothed_temperature = zoo::rollmean(TemperatureCAvg, k = 7, fill = NA))
+
+# Plot time series with smoothed line for TemperatureCAvg
+ggplot(weather_data, aes(x = Date)) +
+  geom_line(aes(y = TemperatureCAvg), color = "blue", alpha = 0.5) +
+  geom_line(aes(y = smoothed_temperature), color = "red") +
+  labs(title = "Smoothed Time Series Plot for Average Temperature",
+       x = "Date",
+       y = "Temperature (°C)")
+
+# Apply LOESS smoothing to Precmm (Precipitation) and save the result
+weather_data <- weather_data %>%
+  mutate(smoothed_precipitation = stats::loess(Precmm ~ as.numeric(Date))$fitted)
+
+# Plot time series with smoothed line for Precipitation
+ggplot(weather_data, aes(x = Date)) +
+  geom_line(aes(y = Precmm), color = "blue", alpha = 0.5) +
+  geom_line(aes(y = smoothed_precipitation), color = "red") +
+  labs(title = "Smoothed Time Series Plot for Precipitation",
+       x = "Date",
+       y = "Precipitation (mm)")  
+
+```
+## Observations:
+smoothed time series plots:
+They are used to visualize trends and patterns in data that changes over time, particularly when the data has high-frequency fluctuations that can obscure underlying patterns.
+
+smoothed time series plot for average temperature:
+The original time series plot (in blue) shows fluctuations in average temperature over time. Smoothing reduces this variability, revealing the underlying trend (in red). In this case, a 7-day moving average filter was used to smooth the temperature data.There is a general seasonality to the temperature data, with higher temperatures in the summer months (around July) and lower temperatures in the winter months (around January).The smoothed trend suggests that temperatures have been increasing over the time period.
+
+smoothed time series plot for precipitation:
+The x-axis shows the date, and the y-axis shows precipitation in millimeters. There are two lines on the plot, a blue line representing the original data and a red line representing the smoothed data.it indicates that there is some variation in precipitation throughout the year.The smoothed precipitation data (red line) appears to be less volatile than the original data (blue line). This suggests that the smoothing technique has helped to remove some of the high-frequency noise from the data.
+
+##The interactive correlation heatmap provides insights into the relationships between different weather variables. 
+```{r}
+# Load required libraries
+library(shiny)
+library(ggplot2)
+library(corrplot)
+
+# Define UI
+ui <- fluidPage(
+  titlePanel("Interactive Correlation Analysis"),
+  sidebarLayout(
+    sidebarPanel(
+      checkboxInput("all_variables", "Select All", value = FALSE),
+      uiOutput("variable_select"),
+      tags$em("Check 'Select All' to enable variable selection")
+    ),
+    mainPanel(
+      plotOutput("correlation_plot")
+    )
+  )
+)
+
+# Define server logic
+server <- function(input, output, session) {
+  # Dynamically render variable selection based on checkbox
+  observe({
+    if (input$all_variables) {
+      output$variable_select <- renderUI({
+        selectInput("variable", "Choose Variables", choices = colnames(weather_data), multiple = TRUE)
+      })
+    } else {
+      output$variable_select <- renderUI({
+        selectInput("variable", "Choose Variables", choices = NULL, multiple = TRUE)
+      })
+    }
+  })
+  
+  # Update plot based on user input
+  observeEvent(input$variable, {
+    print(input$variable)  # Print selected variables for debugging
+    if (!is.null(input$variable) && length(input$variable) > 1) {
+      # Filter out variables with zero variance
+      selected_vars <- input$variable
+      selected_vars <- selected_vars[sapply(weather_data[, selected_vars], function(x) sd(x) != 0)]
+      
+      print(selected_vars)  # Print selected variables after filtering for debugging
+      
+      if (length(selected_vars) > 1) {
+        # Calculate correlation matrix
+        correlation_matrix <- cor(weather_data[, selected_vars])
+        
+        # Plot correlation matrix
+        corrplot(correlation_matrix, method = "circle", tl.col = "black", tl.srt = 45)
+      }
+    }
+  })
+}
+
+# Run the application
+shinyApp(ui = ui, server = server)
+
+```
+## how to access these "interactive parts".
+Select All Variables" checkbox is checked, users can choose multiple variables from the dataset to generate the correlation heatmap. If the checkbox is unchecked, the variable selection dropdown will be disabled.
+## Observations:
+The interactive correlation heatmap is a useful tool for exploring links between weather variables, assisting with data-driven decision-making and further research of weather data.
+## Insights
+Here are some heatmap-based analysis and insights:
+Strength and direction of correlations: Darker colors imply stronger correlations (e.g., dark yellow for positive, dark blue for negative), whereas lighter colors denote less association.
+Temperature Correlations: How temperature metrics relate to other weather characteristics such as humidity or precipitation.
+Weather Pattern Relationships: Find clusters of variables that are highly associated, such as humidity (TdAvgC, HrAvg) or precipitation (Precmm), with certain temperature measurements.
+Identifying Multicollinearity: High correlations between variables can indicate multicollinearity, which affects regression models. Addressing these correlations can help improve model accuracy.
+Variable Selection for Analysis: Prioritize variables that have a greater link with the desired outcome for further analysis or modeling.
+Seasonal Patterns: Investigate how meteorological variables link over time, which might reveal seasonal patterns such as higher relationships between temperature and humidity during specific seasons.
+
+```{r}
+#Exploring Seasonal Weather Trends
+# Load required libraries
+library(ggplot2)
+library(gridExtra)
+
+# Convert Date column to proper date format
+weather_data$Date <- as.Date(weather_data$Date, format = "%d-%m-%Y")
+
+# Extract month from Date
+weather_data$Month <- format(weather_data$Date, "%m")
+
+# Define a function to create time series plots for weather variables by month
+create_time_series_plots <- function(data, y_variable, y_label) {
+  ggplot(data, aes(x = Date, y = .data[[y_variable]])) +
+    geom_line(color = "blue") +
+    labs(title = paste("Seasonal Trend of", y_label),
+         x = "Date",
+         y = y_label) +
+    theme_minimal()
+}
+
+# Create time series plots for temperature variables by month
+avg_temperature_plot <- create_time_series_plots(weather_data, "TemperatureCAvg", "Average Temperature (°C)")
+dew_point_temperature_plot <- create_time_series_plots(weather_data, "TdAvgC", "Average Dew Point Temperature (°C)")
+
+# Create time series plots for precipitation and humidity by month
+precipitation_plot <- create_time_series_plots(weather_data, "Precmm", "Precipitation (mm)")
+humidity_plot <- create_time_series_plots(weather_data, "HrAvg", "Average Humidity (%)")
+
+# Arrange plots in a grid
+grid.arrange(avg_temperature_plot, dew_point_temperature_plot, precipitation_plot, humidity_plot,
+             ncol = 2)
+
+
+```
+## Observations:
+Temperature:
+Temperatures appear to follow a seasonal pattern, with warmer temperatures in months 7, 8, and 9 (presumably summer) and cooler temperatures in months 11, 12, and 1 (likely winter).
+The warmest month looks to be Month 8, according to the average temperature graph.
+The coldest month looks to be Month 12, according to the average temperature graph.
+
+Precipitation:
+According to the precipitation graph, summer months (Months 7, 8, and 9) appear to have more precipitation than winter months (Months 11, 12, and 1).
+According to the precipitation graph, Month 8 appears to be the wettest month.
+
+Humidity:
+The graph's narrow scale makes it impossible to establish a clear general trend in humidity. However, there may be considerable changes in humidity throughout the year.
+
+Dew Point Temperature:
+Dew point temperature, like temperature, is likely to follow a seasonal trend, with higher values in warmer months and lower values in cooler months, according to the graph.
+greatest Dew Point: Month 8 looks to have the greatest dew point temperature, which corresponds to the warmest month.
+
+Overall, the graphs indicate a moderate climate with warm summers, chilly winters, and possibly more precipitation in the summer months.
