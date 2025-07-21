@@ -1,4 +1,4 @@
-# Data-visualiztion-using-R
+# Weather and Crime Patterns Analysis-using-R
 Weather and Crime Patterns Analysis
 This project explores how weather conditions relate to crime patterns in a specified region by analyzing two datasets: one containing detailed crime records, and another covering meteorological observations. Using data visualization and statistical insights, the goal is to reveal trends, patterns, and potential seasonal effects in both weather and criminal activity.
 
